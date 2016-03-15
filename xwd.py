@@ -16,13 +16,16 @@ def binary(stream):
 class FormatError(Exception):
     pass
 
-class BigEndian:
-    def __str__(self):
-        return '>'
+class XWD:
+    def __init__(self, **k):
+        self.__dict__.update(k)
 
-class LittleEndian:
-    def __str__(self):
-        return '<'
+    def __iter__(self):
+        while True:
+            bs = self.input.read(self.bytes_per_line)
+            if len(bs) == 0:
+                break
+            yield bs
 
 def xwd_open(f):
     header = f.read(8)
@@ -40,7 +43,6 @@ def xwd_open(f):
     else:
         fmt = '>L'      # little endian
         size = size_le
-    print(fmt)
 
     version, = struct.unpack(fmt, header[4:8])
     if version != 7:
@@ -78,8 +80,27 @@ def xwd_open(f):
     for field in fields:
         v, = struct.unpack(fmt, f.read(4))
         res[field] = v
-        print(field, v)
 
+    header_size = 8 + 4 * len(fields)
+    window_name_len = size - header_size
+
+    if window_name_len <= 0:
+        raise FormatError(
+          "Size in header, {!r}, is too small".format(size))
+
+    window_name = f.read(window_name_len)[:-1]
+    res['window_name'] = window_name
+
+    # read, but ignore, the colours
+    E = fmt[0]  # endianness
+    color_fmt = fmt + (E + 'H')*3 + 'B' + 'B'
+    for i in range(res['ncolors']):
+        f.read(12)
+    print(f.tell())
+
+    dump = XWD(input=f, **res)
+    for row in dump:
+        print(row)
 
 def main():
     inp = binary(sys.stdin)
