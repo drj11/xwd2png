@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from __future__ import print_function, unicode_literals
+from __future__ import division, print_function, unicode_literals
 
 import struct
 import sys
@@ -16,6 +16,15 @@ def binary(stream):
 class FormatError(Exception):
     pass
 
+class NotImplemented(Exception):
+    pass
+
+class BigEndian:
+    pass
+
+class LittleEndian:
+    pass
+
 class XWD:
     def __init__(self, **k):
         self.__dict__.update(k)
@@ -26,6 +35,25 @@ class XWD:
             if len(bs) == 0:
                 break
             yield bs
+
+    def pixels(self, row):
+        bpp = self.bits_per_pixel // 8
+        if bpp * 8 != self.bits_per_pixel:
+            raise NotImplemented("Cannot handle bits_per_pixel of {!r}".format(
+              self.bits_per_pixel))
+
+        for s in range(0, len(row), bpp):
+            pix = row[s:s+bpp]
+            # pad to 4 bytes
+            pad = b'\x00' * (4 - len(pix))
+            if self.endian == BigEndian:
+                fmt = ">L"
+                pix = pad + pix
+            else:
+                fmt = "<L"
+                pix = pix + pad
+            v, = struct.unpack(fmt, pix)
+            yield v
 
 def xwd_open(f):
     header = f.read(8)
@@ -38,10 +66,12 @@ def xwd_open(f):
             header[:4]))
 
     if size_be < 65336:
-        fmt = '>L'      # big endian
+        endian = BigEndian
+        fmt = '>L'
         size = size_be
     else:
-        fmt = '>L'      # little endian
+        endian = LittleEndian
+        fmt = '>L'
         size = size_le
 
     version, = struct.unpack(fmt, header[4:8])
@@ -76,7 +106,7 @@ def xwd_open(f):
         'window_bdrwidth',
     ]
 
-    res = dict(header_size=size, version=version)
+    res = dict(header_size=size, version=version, endian=endian)
     for field in fields:
         v, = struct.unpack(fmt, f.read(4))
         res[field] = v
@@ -96,10 +126,12 @@ def xwd_open(f):
     color_fmt = fmt + (E + 'H')*3 + 'B' + 'B'
     for i in range(res['ncolors']):
         f.read(12)
-    print(f.tell())
 
     dump = XWD(input=f, **res)
     for row in dump:
+        for pixel in dump.pixels(row):
+            continue
+            print("{:x}".format(pixel))
         print(row)
 
 def main():
