@@ -2,6 +2,7 @@
 
 from __future__ import division, print_function, unicode_literals
 
+import getopt
 import struct
 import sys
 
@@ -26,8 +27,14 @@ class LittleEndian:
     pass
 
 class XWD:
-    def __init__(self, **k):
-        self.__dict__.update(k)
+    def __init__(self, input, info=None):
+        if info:
+            self.__dict__.update(info)
+        self.info_dict = info
+        self.input = input
+
+    def info(self):
+        return dict(self.info_dict)
 
     def __iter__(self):
         while True:
@@ -127,16 +134,37 @@ def xwd_open(f):
     for i in range(res['ncolors']):
         f.read(12)
 
-    dump = XWD(input=f, **res)
-    for row in dump:
-        for pixel in dump.pixels(row):
+    xwd = XWD(input=f, info=res)
+    return xwd
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+
+    opts, args = getopt.getopt(argv[1:], 'i', ['info'])
+
+    os = [o for o,v in opts]
+
+    if len(args) == 0:
+        inp = binary(sys.stdin)
+    else:
+        inp = open(args[0], 'rb')
+
+    xwd = xwd_open(inp)
+
+    if '-i' in os or '--info' in os:
+        info = xwd.info()
+        for k,v in sorted(info.items()):
+            if 'mask' in k:
+                v = "{:#x}".format(v)
+            print(k, v)
+        return 0
+
+    for row in xwd:
+        for pixel in xwd.pixels(row):
             continue
             print("{:x}".format(pixel))
         print(row)
-
-def main():
-    inp = binary(sys.stdin)
-    xwd = xwd_open(inp)
 
 if __name__ == '__main__':
     main()
