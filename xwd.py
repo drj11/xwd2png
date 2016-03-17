@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 
 import getopt
+import itertools
 import struct
 import sys
 
@@ -35,7 +36,10 @@ class XWD:
             bs = self.input.read(self.bytes_per_line)
             if len(bs) == 0:
                 break
-            yield bs
+            yield list(itertools.chain(*self.pixels(bs)))
+
+    def __len__(self):
+        return self.pixmap_height
 
     def pixels(self, row):
         # bytes per pixel
@@ -165,11 +169,9 @@ def main(argv=None):
             print(k, v)
         return 0
 
-    for row in xwd:
-        for pixel in xwd.pixels(row):
-            print(*("{:x}".format(c) for c in pixel))
-        break
-        print(row)
+    import png
+    apng = png.from_array(xwd, "RGB;8")
+    apng.save("out.png")
 
 if __name__ == '__main__':
     main()
