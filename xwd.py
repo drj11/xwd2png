@@ -20,12 +20,6 @@ class FormatError(Exception):
 class NotImplemented(Exception):
     pass
 
-class BigEndian:
-    pass
-
-class LittleEndian:
-    pass
-
 class XWD:
     def __init__(self, input, info=None):
         if info:
@@ -53,7 +47,7 @@ class XWD:
             pix = row[s:s+bpp]
             # pad to 4 bytes
             pad = b'\x00' * (4 - len(pix))
-            if self.endian == BigEndian:
+            if self.byte_order == 1:
                 fmt = ">L"
                 pix = pad + pix
             else:
@@ -63,23 +57,19 @@ class XWD:
             yield v
 
 def xwd_open(f):
-    header = f.read(8)
-    size_be, = struct.unpack('>L', header[:4])
-    size_le, = struct.unpack('<L', header[:4])
-    # Exactly one of these should be "reasonable" (< 65536)
-    if [size_be < 65536, size_le < 65536].count(True) != 1:
-        raise FormatError(
-          "Cannot determine endianness from header size: {!r}".format(
-            header[:4]))
+    # From XWDFile.h:
+    # "Values in the file are most significant byte first."
+    fmt = '>L'
 
-    if size_be < 65336:
-        endian = BigEndian
-        fmt = '>L'
-        size = size_be
-    else:
-        endian = LittleEndian
-        fmt = '>L'
-        size = size_le
+    header = f.read(8)
+
+    header_size, = struct.unpack(fmt, header[:4])
+
+    # There are no magic numbers, so as a sanity check,
+    # we check that the size is "reasonable" (< 65536)
+    if header_size >= 65536:
+        raise FormatError(
+          "header_size too big: {!r}".format(header[:4]))
 
     version, = struct.unpack(fmt, header[4:8])
     if version != 7:
@@ -113,13 +103,13 @@ def xwd_open(f):
         'window_bdrwidth',
     ]
 
-    res = dict(header_size=size, version=version, endian=endian)
+    res = dict(header_size=header_size, version=version)
     for field in fields:
         v, = struct.unpack(fmt, f.read(4))
         res[field] = v
 
-    header_size = 8 + 4 * len(fields)
-    window_name_len = size - header_size
+    xwd_header_size = 8 + 4 * len(fields)
+    window_name_len = header_size - xwd_header_size
 
     if window_name_len <= 0:
         raise FormatError(
@@ -129,8 +119,7 @@ def xwd_open(f):
     res['window_name'] = window_name
 
     # read, but ignore, the colours
-    E = fmt[0]  # endianness
-    color_fmt = fmt + (E + 'H')*3 + 'B' + 'B'
+    color_fmt = fmt + '>H'*3 + 'B' + 'B'
     for i in range(res['ncolors']):
         f.read(12)
 
