@@ -38,10 +38,15 @@ class XWD:
             yield bs
 
     def pixels(self, row):
+        # bytes per pixel
         bpp = self.bits_per_pixel // 8
-        if bpp * 8 != self.bits_per_pixel:
+        if bpp * 8 != self.bits_per_pixel or bpp > 4:
             raise NotImplemented("Cannot handle bits_per_pixel of {!r}".format(
               self.bits_per_pixel))
+
+        red_shift = ffs(self.red_mask)
+        green_shift = ffs(self.green_mask)
+        blue_shift = ffs(self.blue_mask)
 
         for s in range(0, len(row), bpp):
             pix = row[s:s+bpp]
@@ -54,7 +59,11 @@ class XWD:
                 fmt = "<L"
                 pix = pix + pad
             v, = struct.unpack(fmt, pix)
-            yield v
+            r = (v & self.red_mask) >> red_shift
+            g = (v & self.green_mask) >> green_shift
+            b = (v & self.blue_mask) >> blue_shift
+            yield (r,g,b)
+
 
 def xwd_open(f):
     # From XWDFile.h:
@@ -126,6 +135,13 @@ def xwd_open(f):
     xwd = XWD(input=f, info=res)
     return xwd
 
+def ffs(x):
+    """
+    Returns the index, counting from 0, of the
+    least significant set bit in `x`.
+    """
+    return (x&-x).bit_length()-1
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv
@@ -151,8 +167,8 @@ def main(argv=None):
 
     for row in xwd:
         for pixel in xwd.pixels(row):
-            continue
-            print("{:x}".format(pixel))
+            print(*("{:x}".format(c) for c in pixel))
+        break
         print(row)
 
 if __name__ == '__main__':
