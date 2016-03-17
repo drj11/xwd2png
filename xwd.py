@@ -150,7 +150,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    opts, args = getopt.getopt(argv[1:], 'i', ['info'])
+    opts, args = getopt.getopt(argv[1:], 'i', ['info', 'raw'])
 
     os = [o for o,v in opts]
 
@@ -167,6 +167,11 @@ def main(argv=None):
             if 'mask' in k:
                 v = "{:#x}".format(v)
             print(k, v)
+        return 0
+
+    if '--raw' in os:
+        for row in xwd:
+            print(*row)
         return 0
 
     import png
