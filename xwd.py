@@ -42,6 +42,20 @@ class XWD:
         return self.pixmap_height
 
     def pixels(self, row):
+
+        # Check visual_class.
+        # The following table from http://www.opensource.apple.com/source/tcl/tcl-87/tk/tk/xlib/X11/X.h is assumed:
+        # StaticGray    0
+        # GrayScale     1
+        # StaticColor   2
+        # PseudoColor   3
+        # TrueColor     4
+        # DirectColor   5
+
+        if self.visual_class != 4:
+            # TrueColor
+            raise NotImplemented("Cannot handle visual_class {!r}".format(self.visual_class))
+
         # bytes per pixel
         bpp = self.bits_per_pixel // 8
         if bpp * 8 != self.bits_per_pixel or bpp > 4:
