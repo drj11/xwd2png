@@ -1,0 +1,7 @@
+#!/bin/sh
+
+for a in ../sample/*.xwd
+do
+    printf "%s\n" "$a"
+    ../xwd.py "$a"
+done
