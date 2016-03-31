@@ -167,7 +167,7 @@ def main(argv=None):
 
     opts, args = getopt.getopt(argv[1:], 'i', ['info', 'raw'])
 
-    os = [o for o,v in opts]
+    options = [o for o,v in opts]
 
     if len(args) == 0:
         inp = binary(sys.stdin)
@@ -176,7 +176,7 @@ def main(argv=None):
 
     xwd = xwd_open(inp)
 
-    if '-i' in os or '--info' in os:
+    if '-i' in options or '--info' in options:
         info = xwd.info()
         for k,v in sorted(info.items()):
             if 'mask' in k:
@@ -184,7 +184,7 @@ def main(argv=None):
             print(k, v)
         return 0
 
-    if '--raw' in os:
+    if '--raw' in options:
         for row in xwd:
             print(*row)
         return 0
