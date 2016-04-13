@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 import getopt
 import itertools
+import json
 import struct
 import sys
 
@@ -22,10 +23,15 @@ class NotImplemented(Exception):
     pass
 
 class XWD:
-    def __init__(self, input, info=None):
-        if info:
-            self.__dict__.update(info)
-        self.info_dict = info
+    def __init__(self, input, xwd_header=None):
+        if xwd_header:
+            self.__dict__.update(xwd_header)
+        self.xwd_header = xwd_header
+        self.info_dict = dict(
+          h=self.pixmap_height,
+          w=self.pixmap_width,
+          xwd_header=xwd_header,
+          )
         self.input = input
 
     def info(self):
@@ -150,7 +156,7 @@ def xwd_open(f):
     for i in range(res['ncolors']):
         f.read(12)
 
-    xwd = XWD(input=f, info=res)
+    xwd = XWD(input=f, xwd_header=res)
     return xwd
 
 def ffs(x):
@@ -177,10 +183,7 @@ def main(argv=None):
 
     if '-i' in os or '--info' in os:
         info = xwd.info()
-        for k,v in sorted(info.items()):
-            if 'mask' in k:
-                v = "{:#x}".format(v)
-            print(k, v)
+        dprint(info)
         return 0
 
     if '--raw' in os:
@@ -191,6 +194,17 @@ def main(argv=None):
     import png
     apng = png.from_array(xwd, "RGB;8")
     apng.save("out.png")
+
+def dprint(o, indent=0):
+    for k,v in sorted(o.items()):
+        print(" "*indent, end="")
+        if isinstance(v, dict):
+            print(k+":")
+            dprint(v, indent=indent+2)
+            continue
+        if 'mask' in k:
+            v = "{:#x}".format(v)
+        print(k, v)
 
 if __name__ == '__main__':
     main()
