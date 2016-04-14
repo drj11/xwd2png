@@ -17,3 +17,9 @@ Different windows may have dumps in different formats.
 For example,
 my `Terminal` dump has `pixmap depth` 32;
 the `display.im6` (ImageMagick) has `pixmap depth` 24.
+(or possibly this is me taking dumps on different laptops; i'm
+not sure)
+
+`file` reports PixmapDepth. Not sure what "24-bit" means. The
+24-bit sample xwd file I have has 32-bits per pixel in RGB8
+format.
