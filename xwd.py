@@ -245,8 +245,10 @@ def main(argv=None):
 
     if len(args) == 0:
         inp = binary(sys.stdin)
+        out = sys.stdout
     else:
         inp = open(args[0], 'rb')
+        out = None
 
     xwd = xwd_open(inp)
 
@@ -260,24 +262,26 @@ def main(argv=None):
             print(*row)
         return 0
 
-    try:
-        inp.name
-    except AttributeError:
-        output_name = "out.png"
-    else:
-        output_name = re.sub(r'(\..*|)$', '.png', inp.name)
-        if output_name == inp.name:
-            # avoid overwriting input,
-            # if, for some reason,
-            # input is mysteriously named: input.png
-            output_name += '.png'
+    if out is None:
+        try:
+            inp.name
+        except AttributeError:
+            out = "xwd2png_out.png"
+        else:
+            out = re.sub(r'(\..*|)$', '.png', inp.name)
+            if out == inp.name:
+                # avoid overwriting input,
+                # if, for some reason,
+                # input is mysteriously named: input.png
+                output_name += '.png'
 
     format = xwd.uni_format()
 
     assert format == "RGB8"
+
     import png
     apng = png.from_array(xwd, "RGB;8")
-    apng.save(output_name)
+    apng.save(out)
 
 def dprint(o, indent=0):
     for k,v in sorted(o.items()):
