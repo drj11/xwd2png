@@ -20,6 +20,12 @@ the `display.im6` (ImageMagick) has `pixmap depth` 24.
 (or possibly this is me taking dumps on different laptops; i'm
 not sure)
 
+# Visual Class 5
+
+Discovered that (on `bay` at any rate) trying to `xwd` an `xmag`
+window creates a Visual Class 5 dump, which this module
+currently fails to decode.
+
 # 24- and 32-bit
 
 On a modern (2016) Linux box it seems that everything is either
