@@ -48,6 +48,9 @@ class XWD:
         Use the header fields to "comprehend" the image format.
         """
 
+        if 'uni_format' in self.__dict__:
+            return self.uni_format
+
         # Check visual_class.
         # The following table from http://www.opensource.apple.com/source/tcl/tcl-87/tk/tk/xlib/X11/X.h is assumed:
         # StaticGray    0
@@ -88,9 +91,12 @@ class XWD:
         # channel, eg: RGB5X1.
         assert channels[-1].mask & 1
 
-        # Annotate each channel with its bitdepth.
+        # Annotate each channel with its shift and bitdepth.
         for c in channels:
-            c.bits = (c.mask >> ffs(c.mask)).bit_length()
+            c.shift = ffs(c.mask)
+            c.bits = (c.mask >> c.shift).bit_length()
+
+        self.channels = channels
 
         v = ""
         for (bits, chans) in itertools.groupby(
@@ -98,7 +104,7 @@ class XWD:
             v += ''.join(c.name for c in chans)
             v += str(bits)
         self.uni_format = v
-        print(self.uni_format)
+        return self.uni_format
 
     def __iter__(self):
         while True:
@@ -118,7 +124,6 @@ class XWD:
         if bpp * 8 != self.bits_per_pixel or bpp > 4:
             raise NotImplemented("Cannot handle bits_per_pixel of {!r}".format(
               self.bits_per_pixel))
-        assert 0
 
         for s in range(0, len(row), bpp):
             pix = row[s:s+bpp]
@@ -131,10 +136,14 @@ class XWD:
                 fmt = "<L"
                 pix = pix + pad
             v, = struct.unpack(fmt, pix)
-            r = (v & self.red_mask) >> red_shift
-            g = (v & self.green_mask) >> green_shift
-            b = (v & self.blue_mask) >> blue_shift
-            yield (r,g,b)
+
+            cs = self.channels
+            # Note: Could permute channels here
+            # by permuting the `cs` list;
+            # for example to convert BGR to RGB.
+            pixel = tuple((v & c.mask) >> c.shift for c in cs)
+
+            yield pixel
 
 
 def xwd_open(f):
@@ -261,9 +270,9 @@ def main(argv=None):
             # input is mysteriously named: input.png
             output_name += '.png'
 
-    print(list(xwd.pixels(None)))
-    assert 0
+    format = xwd._comprehend_format()
 
+    assert format == "RGB8"
     import png
     apng = png.from_array(xwd, "RGB;8")
     apng.save(output_name)
