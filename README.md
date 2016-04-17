@@ -20,6 +20,18 @@ the `display.im6` (ImageMagick) has `pixmap depth` 24.
 (or possibly this is me taking dumps on different laptops; i'm
 not sure)
 
-`file` reports PixmapDepth. Not sure what "24-bit" means. The
-24-bit sample xwd file I have has 32-bits per pixel in RGB8
-format.
+# 24- and 32-bit
+
+On a modern (2016) Linux box it seems that everything is either
+24- or 32-bit.
+
+`file` reports PixmapDepth. Not sure what "24-bit" means.
+Both the 24-bit sample xwd file I have and
+the 32-bit file
+have 32-bits per pixel
+in XRGB8 format.
+
+Reading a series of 32-bit ints then masking off the top 8 bits
+could be quite slow in Python.
+Might be better to treat a row as an array of octets,
+then remove every 4th octet: del `a[0::4]`
