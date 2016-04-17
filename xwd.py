@@ -23,6 +23,11 @@ class FormatError(Exception):
 class NotImplemented(Exception):
     pass
 
+
+class Channel:
+    def __init__(self, **k):
+        self.__dict__.update(k)
+
 class XWD:
     def __init__(self, input, xwd_header=None):
         if xwd_header:
@@ -38,17 +43,10 @@ class XWD:
     def info(self):
         return dict(self.info_dict)
 
-    def __iter__(self):
-        while True:
-            bs = self.input.read(self.bytes_per_line)
-            if len(bs) == 0:
-                break
-            yield list(itertools.chain(*self.pixels(bs)))
-
-    def __len__(self):
-        return self.pixmap_height
-
-    def pixels(self, row):
+    def _comprehend_format(self):
+        """
+        Use the header fields to "comprehend" the image format.
+        """
 
         # Check visual_class.
         # The following table from http://www.opensource.apple.com/source/tcl/tcl-87/tk/tk/xlib/X11/X.h is assumed:
@@ -63,15 +61,64 @@ class XWD:
             # TrueColor
             raise NotImplemented("Cannot handle visual_class {!r}".format(self.visual_class))
 
+        # Associate each mask with its channel colour.
+        channels = [
+          Channel(name='R', mask=self.red_mask),
+          Channel(name='G', mask=self.green_mask),
+          Channel(name='B', mask=self.blue_mask),
+          ]
+
+        # If fails: some masks are the same.
+        assert len(set(c.mask for c in channels)) == 3
+
+        # Sort Most Significant first
+        channels = sorted(channels, key=lambda x: x.mask, reverse=True)
+
+        # Check that each mask is contiguous.
+        for channel in channels:
+            assert is_contiguous(channel.mask)
+
+        # Check that each mask abuts the next...
+        for channel, successor in zip(channels, channels[1:]):
+            assert is_contiguous(channel.mask + successor.mask)
+
+        # ... check that the last mask is on the right.
+        # If fails: least significant bit is unused.
+        # :todo: if it ever occurs in wild, implement a padding
+        # channel, eg: RGB5X1.
+        assert channels[-1].mask & 1
+
+        # Annotate each channel with its bitdepth.
+        for c in channels:
+            c.bits = (c.mask >> ffs(c.mask)).bit_length()
+
+        v = ""
+        for (bits, chans) in itertools.groupby(
+          channels, lambda c: c.bits):
+            v += ''.join(c.name for c in chans)
+            v += str(bits)
+        self.uni_format = v
+        print(self.uni_format)
+
+    def __iter__(self):
+        while True:
+            bs = self.input.read(self.bytes_per_line)
+            if len(bs) == 0:
+                break
+            yield list(itertools.chain(*self.pixels(bs)))
+
+    def __len__(self):
+        return self.pixmap_height
+
+    def pixels(self, row):
+        self._comprehend_format()
+
         # bytes per pixel
         bpp = self.bits_per_pixel // 8
         if bpp * 8 != self.bits_per_pixel or bpp > 4:
             raise NotImplemented("Cannot handle bits_per_pixel of {!r}".format(
               self.bits_per_pixel))
-
-        red_shift = ffs(self.red_mask)
-        green_shift = ffs(self.green_mask)
-        blue_shift = ffs(self.blue_mask)
+        assert 0
 
         for s in range(0, len(row), bpp):
             pix = row[s:s+bpp]
@@ -167,6 +214,16 @@ def ffs(x):
     """
     return (x&-x).bit_length()-1
 
+def is_contiguous(x):
+    """
+    Check that x is a contiguous series of binary bits.
+    """
+    return is_power_of_2((x >> ffs(x)) + 1)
+
+def is_power_of_2(x):
+    assert x > 0
+    return not(x & (x-1))
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv
@@ -203,6 +260,9 @@ def main(argv=None):
             # if, for some reason,
             # input is mysteriously named: input.png
             output_name += '.png'
+
+    print(list(xwd.pixels(None)))
+    assert 0
 
     import png
     apng = png.from_array(xwd, "RGB;8")
