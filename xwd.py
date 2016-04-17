@@ -5,6 +5,7 @@ from __future__ import division, print_function, unicode_literals
 import getopt
 import itertools
 import json
+import re
 import struct
 import sys
 
@@ -172,7 +173,7 @@ def main(argv=None):
 
     opts, args = getopt.getopt(argv[1:], 'i', ['info', 'raw'])
 
-    os = [o for o,v in opts]
+    options = [o for o,v in opts]
 
     if len(args) == 0:
         inp = binary(sys.stdin)
@@ -181,19 +182,31 @@ def main(argv=None):
 
     xwd = xwd_open(inp)
 
-    if '-i' in os or '--info' in os:
+    if '-i' in options or '--info' in options:
         info = xwd.info()
         dprint(info)
         return 0
 
-    if '--raw' in os:
+    if '--raw' in options:
         for row in xwd:
             print(*row)
         return 0
 
+    try:
+        inp.name
+    except AttributeError:
+        output_name = "out.png"
+    else:
+        output_name = re.sub(r'(\..*|)$', '.png', inp.name)
+        if output_name == inp.name:
+            # avoid overwriting input,
+            # if, for some reason,
+            # input is mysteriously named: input.png
+            output_name += '.png'
+
     import png
     apng = png.from_array(xwd, "RGB;8")
-    apng.save("out.png")
+    apng.save(output_name)
 
 def dprint(o, indent=0):
     for k,v in sorted(o.items()):
