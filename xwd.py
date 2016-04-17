@@ -245,7 +245,7 @@ def main(argv=None):
 
     if len(args) == 0:
         inp = binary(sys.stdin)
-        out = sys.stdout
+        out = binary(sys.stdout)
     else:
         inp = open(args[0], 'rb')
         out = None
