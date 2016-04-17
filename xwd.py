@@ -43,13 +43,15 @@ class XWD:
     def info(self):
         return dict(self.info_dict)
 
-    def _comprehend_format(self):
+    def uni_format(self):
         """
-        Use the header fields to "comprehend" the image format.
+        Return the "universal format" for the XWD file.
+        As a side effect, compute and cache various
+        intermediate values (such as shifts and depths).
         """
 
-        if 'uni_format' in self.__dict__:
-            return self.uni_format
+        if '_uni_format' in self.__dict__:
+            return self._uni_format
 
         # Check visual_class.
         # The following table from http://www.opensource.apple.com/source/tcl/tcl-87/tk/tk/xlib/X11/X.h is assumed:
@@ -103,8 +105,8 @@ class XWD:
           channels, lambda c: c.bits):
             v += ''.join(c.name for c in chans)
             v += str(bits)
-        self.uni_format = v
-        return self.uni_format
+        self._uni_format = v
+        return self.uni_format()
 
     def __iter__(self):
         while True:
@@ -117,7 +119,7 @@ class XWD:
         return self.pixmap_height
 
     def pixels(self, row):
-        self._comprehend_format()
+        self.uni_format()
 
         # bytes per pixel
         bpp = self.bits_per_pixel // 8
@@ -270,7 +272,7 @@ def main(argv=None):
             # input is mysteriously named: input.png
             output_name += '.png'
 
-    format = xwd._comprehend_format()
+    format = xwd.uni_format()
 
     assert format == "RGB8"
     import png
