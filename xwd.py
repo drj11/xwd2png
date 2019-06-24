@@ -12,13 +12,15 @@ import sys
 # :python3:buffer: we need to get a binary stream in both
 # Python 2 and Python 3.
 def binary(stream):
-    if hasattr(stream, 'buffer'):
+    if hasattr(stream, "buffer"):
         return stream.buffer
     else:
         return stream
 
+
 class FormatError(Exception):
     pass
+
 
 class NotImplemented(Exception):
     pass
@@ -28,16 +30,15 @@ class Channel:
     def __init__(self, **k):
         self.__dict__.update(k)
 
+
 class XWD:
     def __init__(self, input, xwd_header=None):
         if xwd_header:
             self.__dict__.update(xwd_header)
         self.xwd_header = xwd_header
         self.info_dict = dict(
-          h=self.pixmap_height,
-          w=self.pixmap_width,
-          xwd_header=xwd_header,
-          )
+            h=self.pixmap_height, w=self.pixmap_width, xwd_header=xwd_header
+        )
         self.input = input
 
     def info(self):
@@ -50,7 +51,7 @@ class XWD:
         intermediate values (such as shifts and depths).
         """
 
-        if '_uni_format' in self.__dict__:
+        if "_uni_format" in self.__dict__:
             return self._uni_format
 
         # Check visual_class.
@@ -64,14 +65,16 @@ class XWD:
 
         if self.visual_class != 4:
             # TrueColor
-            raise NotImplemented("Cannot handle visual_class {!r}".format(self.visual_class))
+            raise NotImplemented(
+                "Cannot handle visual_class {!r}".format(self.visual_class)
+            )
 
         # Associate each mask with its channel colour.
         channels = [
-          Channel(name='R', mask=self.red_mask),
-          Channel(name='G', mask=self.green_mask),
-          Channel(name='B', mask=self.blue_mask),
-          ]
+            Channel(name="R", mask=self.red_mask),
+            Channel(name="G", mask=self.green_mask),
+            Channel(name="B", mask=self.blue_mask),
+        ]
 
         # If fails: some masks are the same.
         assert len(set(c.mask for c in channels)) == 3
@@ -101,9 +104,8 @@ class XWD:
         self.channels = channels
 
         v = ""
-        for (bits, chans) in itertools.groupby(
-          channels, lambda c: c.bits):
-            v += ''.join(c.name for c in chans)
+        for (bits, chans) in itertools.groupby(channels, lambda c: c.bits):
+            v += "".join(c.name for c in chans)
             v += str(bits)
         self._uni_format = v
         return self.uni_format()
@@ -124,13 +126,14 @@ class XWD:
         # bytes per pixel
         bpp = self.bits_per_pixel // 8
         if bpp * 8 != self.bits_per_pixel or bpp > 4:
-            raise NotImplemented("Cannot handle bits_per_pixel of {!r}".format(
-              self.bits_per_pixel))
+            raise NotImplemented(
+                "Cannot handle bits_per_pixel of {!r}".format(self.bits_per_pixel)
+            )
 
         for s in range(0, len(row), bpp):
-            pix = row[s:s+bpp]
+            pix = row[s : s + bpp]
             # pad to 4 bytes
-            pad = b'\x00' * (4 - len(pix))
+            pad = b"\x00" * (4 - len(pix))
             if self.byte_order == 1:
                 fmt = ">L"
                 pix = pad + pix
@@ -151,7 +154,7 @@ class XWD:
 def xwd_open(f):
     # From XWDFile.h:
     # "Values in the file are most significant byte first."
-    fmt = '>L'
+    fmt = ">L"
 
     header = f.read(8)
 
@@ -160,39 +163,38 @@ def xwd_open(f):
     # There are no magic numbers, so as a sanity check,
     # we check that the size is "reasonable" (< 65536)
     if header_size >= 65536:
-        raise FormatError(
-          "header_size too big: {!r}".format(header[:4]))
+        raise FormatError("header_size too big: {!r}".format(header[:4]))
 
     version, = struct.unpack(fmt, header[4:8])
     if version != 7:
         raise FormatError(
-          "Sorry only version 7 supported, not version {!r}".format(
-            version))
+            "Sorry only version 7 supported, not version {!r}".format(version)
+        )
 
     fields = [
-        'pixmap_format',
-        'pixmap_depth',
-        'pixmap_width',
-        'pixmap_height',
-        'xoffset',
-        'byte_order',
-        'bitmap_unit',
-        'bitmap_bit_order',
-        'bitmap_pad',
-        'bits_per_pixel',
-        'bytes_per_line',
-        'visual_class',
-        'red_mask',
-        'green_mask',
-        'blue_mask',
-        'bits_per_rgb',
-        'colormap_entries',
-        'ncolors',
-        'window_width',
-        'window_height',
-        'window_x',
-        'window_y',
-        'window_bdrwidth',
+        "pixmap_format",
+        "pixmap_depth",
+        "pixmap_width",
+        "pixmap_height",
+        "xoffset",
+        "byte_order",
+        "bitmap_unit",
+        "bitmap_bit_order",
+        "bitmap_pad",
+        "bits_per_pixel",
+        "bytes_per_line",
+        "visual_class",
+        "red_mask",
+        "green_mask",
+        "blue_mask",
+        "bits_per_rgb",
+        "colormap_entries",
+        "ncolors",
+        "window_width",
+        "window_height",
+        "window_x",
+        "window_y",
+        "window_bdrwidth",
     ]
 
     res = dict(header_size=header_size, version=version)
@@ -204,26 +206,27 @@ def xwd_open(f):
     window_name_len = header_size - xwd_header_size
 
     if window_name_len <= 0:
-        raise FormatError(
-          "Size in header, {!r}, is too small".format(size))
+        raise FormatError("Size in header, {!r}, is too small".format(size))
 
     window_name = f.read(window_name_len)[:-1]
-    res['window_name'] = window_name
+    res["window_name"] = window_name
 
     # read, but ignore, the colours
-    color_fmt = fmt + '>H'*3 + 'B' + 'B'
-    for i in range(res['ncolors']):
+    color_fmt = fmt + ">H" * 3 + "B" + "B"
+    for i in range(res["ncolors"]):
         f.read(12)
 
     xwd = XWD(input=f, xwd_header=res)
     return xwd
+
 
 def ffs(x):
     """
     Returns the index, counting from 0, of the
     least significant set bit in `x`.
     """
-    return (x&-x).bit_length()-1
+    return (x & -x).bit_length() - 1
+
 
 def is_contiguous(x):
     """
@@ -231,33 +234,35 @@ def is_contiguous(x):
     """
     return is_power_of_2((x >> ffs(x)) + 1)
 
+
 def is_power_of_2(x):
     assert x > 0
-    return not(x & (x-1))
+    return not (x & (x - 1))
+
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    opts, args = getopt.getopt(argv[1:], 'i', ['info', 'raw'])
+    opts, args = getopt.getopt(argv[1:], "i", ["info", "raw"])
 
-    options = [o for o,v in opts]
+    options = [o for o, v in opts]
 
     if len(args) == 0:
         inp = binary(sys.stdin)
         out = binary(sys.stdout)
     else:
-        inp = open(args[0], 'rb')
+        inp = open(args[0], "rb")
         out = None
 
     xwd = xwd_open(inp)
 
-    if '-i' in options or '--info' in options:
+    if "-i" in options or "--info" in options:
         info = xwd.info()
         dprint(info)
         return 0
 
-    if '--raw' in options:
+    if "--raw" in options:
         for row in xwd:
             print(*row)
         return 0
@@ -268,31 +273,34 @@ def main(argv=None):
         except AttributeError:
             out = "xwd2png_out.png"
         else:
-            out = re.sub(r'(\..*|)$', '.png', inp.name)
+            out = re.sub(r"(\..*|)$", ".png", inp.name)
             if out == inp.name:
                 # avoid overwriting input,
                 # if, for some reason,
                 # input is mysteriously named: input.png
-                output_name += '.png'
+                output_name += ".png"
 
     format = xwd.uni_format()
 
     assert format == "RGB8"
 
     import png
+
     apng = png.from_array(xwd, "RGB;8")
     apng.save(out)
 
+
 def dprint(o, indent=0):
-    for k,v in sorted(o.items()):
-        print(" "*indent, end="")
+    for k, v in sorted(o.items()):
+        print(" " * indent, end="")
         if isinstance(v, dict):
-            print(k+":")
-            dprint(v, indent=indent+2)
+            print(k + ":")
+            dprint(v, indent=indent + 2)
             continue
-        if 'mask' in k:
+        if "mask" in k:
             v = "{:#x}".format(v)
         print(k, v)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
