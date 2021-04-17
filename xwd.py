@@ -8,6 +8,7 @@ import json
 import re
 import struct
 import sys
+import io
 
 # :python3:buffer: we need to get a binary stream in both
 # Python 2 and Python 3.
@@ -287,7 +288,10 @@ def main(argv=None):
     import png
 
     apng = png.from_array(xwd, "RGB;8")
-    apng.save(out)
+    if isinstance(out, io.BufferedWriter):
+        apng.write(out)
+    else:
+        apng.save(out)
 
 
 def dprint(o, indent=0):
