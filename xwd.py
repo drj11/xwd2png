@@ -271,14 +271,14 @@ def main(argv=None):
         try:
             inp.name
         except AttributeError:
-            out = "xwd2png_out.png"
+            outname = "xwd2png_out.png"
         else:
-            out = re.sub(r"(\..*|)$", ".png", inp.name, 1)
-            if out == inp.name:
-                # avoid overwriting input,
+            outname = re.sub(r"(\..*|)$", ".png", inp.name, 1)
+            if outname == inp.name:
+                # Avoid overwriting input,
                 # if, for some reason,
-                # input is mysteriously named: input.png
-                output_name += ".png"
+                # input is mysteriously named: input.png.
+                outname += ".png"
 
     format = xwd.uni_format()
 
@@ -287,7 +287,10 @@ def main(argv=None):
     import png
 
     apng = png.from_array(xwd, "RGB;8")
-    apng.save(out)
+    if out is not None:
+        apng.write(out)
+    else:
+        apng.save(outname)
 
 
 def dprint(o, indent=0):
