@@ -273,7 +273,7 @@ def main(argv=None):
         except AttributeError:
             out = "xwd2png_out.png"
         else:
-            out = re.sub(r"(\..*|)$", ".png", inp.name)
+            out = re.sub(r"(\..*|)$", ".png", inp.name, 1)
             if out == inp.name:
                 # avoid overwriting input,
                 # if, for some reason,
